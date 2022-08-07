@@ -1,0 +1,12 @@
+[
+   {
+       "Name": "containerName1",
+       "VolumePath": "/path/of/volume1",
+       "S3BackupBucket": "s3Bucket1"
+   },
+   {
+       "Name": "containerName2",
+       "VolumePath": "/path/of/volume2",
+       "S3BackupBucket": "s3Bucket2"
+   }
+]
