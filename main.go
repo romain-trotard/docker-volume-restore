@@ -16,14 +16,11 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-type ContainerInfo struct {
+type VolumeInfo struct {
     Name string
+    ContainerName string
     VolumePath string
     S3BackupBucket string
-}
-
-type Containers struct {
-    containers []ContainerInfo
 }
 
 func runDockerCommand(args []string) {
@@ -52,7 +49,7 @@ func main() {
         log.Fatalf("You have to pass the container name")
     }
 
-    containerName := os.Args[1]
+    volumeName := os.Args[1]
 
 	err := godotenv.Load(".env")
 	
@@ -60,33 +57,33 @@ func main() {
 		log.Fatalf("Cannot load env file %s", err)
 	}
 
-    containersFile, err := os.ReadFile("containers.json")
+    volumesFile, err := os.ReadFile("volumes.json")
 
 	if err != nil {
-		log.Fatalf("Cannot read containers.json file %s", err)
+		log.Fatalf("Cannot read volumes.json file %s", err)
 	}
 
-    var containers []ContainerInfo
+    var volumes []VolumeInfo
 
-    err = json.Unmarshal(containersFile, &containers)
+    err = json.Unmarshal(volumesFile, &volumes)
 
 	if err != nil {
-		log.Fatalf("Cannot decrypt containers from file %s", err)
+		log.Fatalf("Cannot decrypt volumes from file %s", err)
 	}
 
-    containersByName := make(map[string]ContainerInfo)
-    fmt.Println(containers)
+    volumesByName := make(map[string]VolumeInfo)
+    fmt.Println(volumes)
 
-    for _, containerInfo := range containers {
-        fmt.Println("Current container name", containerInfo.Name)
-        containersByName[containerInfo.Name] = containerInfo
+    for _, volumeInfo := range volumes {
+        fmt.Println("Current container name", volumeInfo.Name)
+        volumesByName[volumeInfo.Name] = volumeInfo
     }
 
-    currentContainer, present := containersByName[containerName]
-    fmt.Println(containersByName)
+    currentVolume, present := volumesByName[volumeName]
+    fmt.Println(volumesByName)
 
     if !present {
-        log.Fatalf("The container name does not exist in the containers.json file: %s", containerName)
+        log.Fatalf("The container name does not exist in the volumes.json file: %s", volumeName)
     }
 
     bucketName := os.Getenv("AWS_S3_BUCKET_NAME")
@@ -106,7 +103,7 @@ func main() {
 	context := context.Background()
 
 	objects := minioClient.ListObjects(context, bucketName, minio.ListObjectsOptions{
-		Prefix:    currentContainer.S3BackupBucket,
+		Prefix:    currentVolume.S3BackupBucket,
 		Recursive: true,
 	})
 
@@ -149,10 +146,10 @@ func main() {
     fmt.Println("Successfuly download the object")
 
     fmt.Println("Creating the container")
-    runDockerCommand([]string{"run", "--rm", "-d", "--volumes-from", currentContainer.Name, "-v", "/tmp/docker-backup:/home", "--name", "restoration-volume-container", "ubuntu", "sleep", "infinity"})
+    runDockerCommand([]string{"run", "--rm", "-d", "--volumes-from", currentVolume.ContainerName, "-v", "/tmp/docker-backup:/home", "--name", "restoration-volume-container", "ubuntu", "sleep", "infinity"})
 
     fmt.Println("Going in the container")
-    runDockerCommand([]string{"exec", "-it", "restoration-volume-container", "tar", "-zxvf", fmt.Sprintf("/home/%s", fileName), "-C", currentContainer.VolumePath, "--strip-components", "1"})
+    runDockerCommand([]string{"exec", "-it", "restoration-volume-container", "tar", "-zxvf", fmt.Sprintf("/home/%s", fileName), "-C", currentVolume.VolumePath, "--strip-components", "1"})
 
     fmt.Println("Stoping the container")
     runDockerCommand([]string{"stop", "restoration-volume-container"})

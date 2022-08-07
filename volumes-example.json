@@ -1,11 +1,13 @@
 [
    {
-       "Name": "containerName1",
+       "Name": "volume1",
+       "ContainerName": "containerName1",
        "VolumePath": "/path/of/volume1",
        "S3BackupBucket": "s3Bucket1"
    },
    {
-       "Name": "containerName2",
+       "Name": "volume2",
+       "ContainerName": "containerName2",
        "VolumePath": "/path/of/volume2",
        "S3BackupBucket": "s3Bucket2"
    }
